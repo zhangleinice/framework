@@ -1,4 +1,5 @@
-const delegate = require("delegates");
+// const delegate = require("delegates");
+const delegate = require("./delegates");
 
 module.exports = {
   inspect() {},

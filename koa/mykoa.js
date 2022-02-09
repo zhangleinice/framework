@@ -6,6 +6,58 @@ const http = require("http");
 const Emitter = require("events");
 const context = require("./context");
 
+module.exports = class Application extends Emitter {
+  constructor() {
+    super();
+    this.middleware_list = [];
+    this.context = {};
+  }
+
+  // 注册中间件
+  use(middleware) {
+    if (typeof middleware !== "function")
+      throw new TypeError("middleware must be a function!");
+    this.middleware_list.push(middleware);
+    return this;
+  }
+
+  // 传给http.createServer的回调函数
+  callback() {
+    // compose 将中间件合并成一个函数
+    const fn = compose(this.middleware_list);
+    // callback返回值必须符合http.createServer参数形式
+    // 即 (req, res) => {}
+    const handleRequest = (req, res) => {
+      const ctx = this.createContext(req, res);
+      return this.handleRequest(ctx, fn);
+    };
+    return handleRequest;
+  }
+
+  handleRequest(ctx, fn) {
+    const handleResponse = () => respond(ctx);
+    return fn(ctx)
+      .then(handleResponse)
+      .catch((err) => console.log("Somethis is wrong: ", err));
+  }
+
+  // koa实际上扩展了 原生req，res
+  createContext(req, res) {
+    const context = Object.create(this.context);
+    context.app = this;
+    context.req = req;
+    context.res = res;
+    return context;
+  }
+
+  listen(...args) {
+    // callback是传给http.createServer的回调函数，这个函数必须符合http.createServer的参数形式
+    // function(req, res){}
+    const server = http.createServer(this.callback());
+    return server.listen(...args);
+  }
+};
+
 /**
  * 1. 校验
  * 2. 包装promise
@@ -19,9 +71,11 @@ function compose(middleware_list) {
       }
     }
   }
+
   return function fn(ctx, next) {
     return dispatch(0);
     function dispatch(i) {
+      // 第i个中间件
       let fn = middleware_list[i];
 
       if (i === middleware_list.length) {
@@ -42,61 +96,9 @@ function compose(middleware_list) {
   };
 }
 
-class Application extends Emitter {
-  constructor() {
-    super();
-    this.middleware_list = [];
-    this.context = context;
-  }
-
-  createContext(req, res) {
-    const context = Object.create(this.context);
-    context.app = this;
-    context.req = req;
-    context.res = res;
-    return context;
-  }
-
-  callback() {
-    // compose 将中间件合并成一个函数
-    const fn = compose(this.middleware_list);
-    // callback返回值必须符合http.createServer参数形式
-    // 即 (req, res) => {}
-    const handleRequest = (req, res) => {
-      const ctx = this.createContext(req, res);
-      return this.handleRequest(ctx, fn);
-    };
-    return handleRequest;
-  }
-
-  // 注册中间件
-  use(middleware) {
-    if (typeof middleware === "function") {
-      this.middleware_list.push(middleware);
-    }
-    return this;
-  }
-
-  listen(...args) {
-    // callback是传给http.createServer的回调函数，这个函数必须符合http.createServer的参数形式
-    // function(req, res){}
-    const server = http.createServer(this.callback());
-    return server.listen(...args);
-  }
-
-  handleRequest(ctx, fn) {
-    const onError = (err) => ctx.onError(err);
-    const handleResponse = () => respond(ctx);
-    return fn(ctx).then(handleResponse).catch(onError);
-  }
+// 将网络请求返回
+function respond(ctx) {
+  const res = ctx.res;
+  const body = ctx.body;
+  return res.end(body);
 }
-
-const app = new Application();
-
-app.use(async (ctx, next) => {
-  console.log(1);
-  await next();
-  console.log(2);
-});
-
-app.listen(8000);
