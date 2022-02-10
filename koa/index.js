@@ -32,20 +32,20 @@ app.use(async (ctx, next) => {
 app.listen(8000);
 
 // 洋葱模型为什么会回来？ 其实就是函数调用栈，函数执行完毕esp指针下移
-function a() {
-  console.log(5);
-  b();
-  console.log(555);
-}
+// function a() {
+//   console.log(5);
+//   b();
+//   console.log(555);
+// }
 
-function b() {
-  console.log(6);
-  c();
-  console.log(666);
-}
+// function b() {
+//   console.log(6);
+//   c();
+//   console.log(666);
+// }
 
-function c() {
-  console.log(7);
-}
+// function c() {
+//   console.log(7);
+// }
 
-a(); // 5, 6, 7, 666, 555
+// a(); // 5, 6, 7, 666, 555
