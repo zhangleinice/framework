@@ -1,5 +1,5 @@
-// const Koa = require("koa");
-const Koa = require("./mykoa");
+const Koa = require("koa");
+// const Koa = require("./mykoa");
 const app = new Koa();
 
 /**
@@ -26,7 +26,10 @@ app.use(async (ctx, next) => {
 // 输出 1， 2， 3, 33， 22， 11
 
 app.use(async (ctx, next) => {
-  ctx.body = "hello word";
+  ctx.body = "<p>hello world</p>";
+
+  // 反射型xss
+  // ctx.body = ctx.query?.userName;
 });
 
 app.listen(8000);
